@@ -144,9 +144,7 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
 
   // Handle submission
   const handleSubmit = (isTimeUp: boolean = false) => {
-    // Sprawdź czy komponent jest nadal zamontowany
-    if (!isMounted.current) return;
-    
+    // Jeśli nie ma problemu lub brak odpowiedzi (i nie upłynął czas) lub jest w trakcie przejścia, przerwij
     if (!currentProblem || (!answer && !isTimeUp) || isTransitioning) return;
     
     // Set transitioning flag to prevent multiple submissions
@@ -182,7 +180,7 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
       
       // Dodawanie do powtórek tylko gdy NIE jesteśmy w trybie powtórki
       // I tylko gdy czas się skończył LUB użytkownik odpowiedział źle
-      if (isMounted.current && !isReviewMode && (isTimeUp || (!isTimeUp && userAnswer !== 0))) {
+      if (!isReviewMode && (isTimeUp || (!isTimeUp && userAnswer !== 0))) {
         // Store the mistake for review
         addMistake({
           question: formatProblem(a, b, operator as '*' | '/'),
@@ -196,9 +194,6 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
     // Call the callback if provided (for review mode), but only after the feedback delay
     if (onAnswered) {
       setTimeout(() => {
-        // Sprawdź czy komponent jest nadal zamontowany
-        if (!isMounted.current) return;
-        
         // Pass the correct status to the Review component
         onAnswered(isCorrect, reviewIndex);
         // Reset transitioning flag after the callback
@@ -207,9 +202,6 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
     } else {
       // Move to next problem after a delay
       setTimeout(() => {
-        // Sprawdź czy komponent jest nadal zamontowany
-        if (!isMounted.current) return;
-        
         // Increment question number if not in review mode and not at the last question
         if (!isReviewMode && currentQuestionNumber < questionCount) {
           const nextQuestionNumber = currentQuestionNumber + 1;
@@ -233,11 +225,9 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
         resetTimer();
         setIsTransitioning(false);
         
-        // Krótkie opóźnienie przed rozpoczęciem odliczania, aby zapewnić reset bez animacji
+        // Uruchom timer dla następnego pytania
         setTimeout(() => {
-          if (isMounted.current) {
-            startCountdown();
-          }
+          startCountdown();
         }, COUNTDOWN_START_DELAY);
       }, FEEDBACK_DELAY);
     }

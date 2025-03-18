@@ -88,25 +88,44 @@ export function generateDivisionProblem(
       // If only one number is selected, always use it as the divisor
       if (selectedNumbers.length === 1) {
         divisor = selectedNumbers[0];
-        quotient = getRandomInt(1, 10); // Reasonable range for quotient
+        quotient = getRandomInt(1, 10); // Ograniczenie wyniku do maksymalnie 10
         dividend = divisor * quotient;
       } else {
         // For division with multiple selected numbers:
         // 1. Pick a divisor from selected numbers
-        // 2. Pick a quotient (result) from 1-12 (reasonable range)
+        // 2. Pick a quotient (result) from 1-10 (ograniczone do 10)
         // 3. Calculate dividend as divisor * quotient
         divisor = getRandomFromArray(selectedNumbers);
-        quotient = getRandomInt(1, 12);
+        quotient = getRandomInt(1, 10); // Zmienione z 12 na 10
         dividend = divisor * quotient;
       }
     } else {
-      // Original implementation for range-based division
-      divisor = getRandomInt(2, Math.min(10, maxDividend / 2)); // Limit divisor size
+      // Zakres dla dzielnika powinien zależeć od wybranego poziomu trudności
+      // Dla niższych zakresów (np. 1-20) używamy mniejszych dzielników
+      // Dla wyższych zakresów używamy większych dzielników
+      const maxPossibleDivisor = Math.floor(maxDividend / 2);
+      
+      // Ustawiamy maksymalny dzielnik na podstawie zakresu
+      let maxDivisor;
+      if (maxDividend <= 20) {
+        // Łatwy zakres - dzielniki 2-5
+        maxDivisor = Math.min(5, maxPossibleDivisor);
+      } else if (maxDividend <= 50) {
+        // Średni zakres - dzielniki 2-9
+        maxDivisor = Math.min(9, maxPossibleDivisor);
+      } else {
+        // Trudny zakres - dzielniki 2-12
+        maxDivisor = Math.min(12, maxPossibleDivisor);
+      }
+      
+      // Wybierz dzielnik z odpowiedniego zakresu dla poziomu trudności
+      divisor = getRandomInt(2, maxDivisor);
       
       // Ensure we get a whole number result by starting with the result and working backwards
+      // Ograniczenie wyniku do maksymalnie 10
       quotient = getRandomInt(
         Math.max(1, Math.floor(minDividend / divisor)), 
-        Math.floor(maxDividend / divisor)
+        Math.min(10, Math.floor(maxDividend / divisor))
       );
       
       dividend = divisor * quotient;
@@ -184,7 +203,7 @@ export function generateAllMultiplicationProblems(
 // Generate all possible unique division problems for selected numbers
 export function generateAllDivisionProblems(
   selectedNumbers: number[],
-  maxQuotient: number = 12
+  maxQuotient: number = 10
 ): Array<[number, number, number]> {
   const problems: Array<[number, number, number]> = [];
   const usedPairs = new Set<string>();
