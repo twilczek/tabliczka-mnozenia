@@ -82,6 +82,7 @@ export function generateDivisionProblem(
 ): [number, number, number] {
   let dividend: number, divisor: number, quotient: number;
   let isLastProblem = false;
+  let attempts = 0; // Licznik prób, aby uniknąć nieskończonej pętli
 
   do {
     if (selectedNumbers && selectedNumbers.length > 0) {
@@ -96,46 +97,91 @@ export function generateDivisionProblem(
         // 2. Pick a quotient (result) from 1-10 (ograniczone do 10)
         // 3. Calculate dividend as divisor * quotient
         divisor = getRandomFromArray(selectedNumbers);
-        quotient = getRandomInt(1, 10); // Zmienione z 12 na 10
+        quotient = getRandomInt(1, 10); // Wynik nie większy niż 10
         dividend = divisor * quotient;
       }
-    } else {
-      // Zakres dla dzielnika powinien zależeć od wybranego poziomu trudności
-      // Dla niższych zakresów (np. 1-20) używamy mniejszych dzielników
-      // Dla wyższych zakresów używamy większych dzielników
-      const maxPossibleDivisor = Math.floor(maxDividend / 2);
-      
-      // Ustawiamy maksymalny dzielnik na podstawie zakresu
-      let maxDivisor;
-      if (maxDividend <= 20) {
-        // Łatwy zakres - dzielniki 2-5
-        maxDivisor = Math.min(5, maxPossibleDivisor);
-      } else if (maxDividend <= 50) {
-        // Średni zakres - dzielniki 2-9
-        maxDivisor = Math.min(9, maxPossibleDivisor);
-      } else {
-        // Trudny zakres - dzielniki 2-12
-        maxDivisor = Math.min(12, maxPossibleDivisor);
+
+      // Jeśli używamy wybranych liczb, ale dzielna nie mieści się w wybranym zakresie,
+      // generujemy nowe zadanie dla trybu z przedziałem liczbowym
+      if (dividend < minDividend || dividend > maxDividend) {
+        // Jednak pozwalamy na maximum 20 prób, aby uniknąć nieskończonej pętli
+        attempts++;
+        if (attempts > 20) {
+          // Jeśli po 20 próbach nie udało się wygenerować zadania z wybranego zakresu,
+          // tworzymy zadanie które mieści się jak najbliżej wybranego zakresu
+          dividend = Math.max(minDividend, Math.min(maxDividend, dividend));
+          break;
+        }
+        continue;
       }
+    } else {
+      // Generowanie problemów w oparciu o wybrany zakres (dzielna)
       
-      // Wybierz dzielnik z odpowiedniego zakresu dla poziomu trudności
-      divisor = getRandomInt(2, maxDivisor);
+      // Próbujemy wygenerować dzielną bezpośrednio z zakresu
+      // Najpierw wybieramy losową dzielną z zakresu
+      const potentialDividends = [];
       
-      // Ensure we get a whole number result by starting with the result and working backwards
-      // Ograniczenie wyniku do maksymalnie 10
-      quotient = getRandomInt(
-        Math.max(1, Math.floor(minDividend / divisor)), 
-        Math.min(10, Math.floor(maxDividend / divisor))
-      );
-      
-      dividend = divisor * quotient;
+      // Dla zakresu trudnego, chcemy mieć większą szansę na większe liczby
+      if (minDividend >= 61) { // Trudny zakres
+        // Grupuj możliwe dzielne według dzielników
+        for (let i = 2; i <= 10; i++) { // Dzielniki 2-10
+          for (let j = 1; j <= 10; j++) { // Wyniki 1-10
+            const possibleDividend = i * j;
+            if (possibleDividend >= minDividend && possibleDividend <= maxDividend) {
+              potentialDividends.push({ dividend: possibleDividend, divisor: i, quotient: j });
+            }
+          }
+        }
+        
+        // Jeśli znaleziono potencjalne dzielne, wybierz jedną losowo
+        if (potentialDividends.length > 0) {
+          const selected = getRandomFromArray(potentialDividends);
+          dividend = selected.dividend;
+          divisor = selected.divisor;
+          quotient = selected.quotient;
+        } else {
+          // Awaryjnie - jeśli nie znaleziono żadnych odpowiednich dzielnych,
+          // generujemy standardowo
+          divisor = getRandomInt(2, 10);
+          quotient = getRandomInt(1, 10);
+          // Próbujemy dopasować dzielną do zakresu
+          dividend = divisor * quotient;
+          if (dividend < minDividend || dividend > maxDividend) {
+            attempts++;
+            if (attempts > 20) break;
+            continue;
+          }
+        }
+      } else {
+        // Dla zakresów łatwego i średniego generujemy standardową metodą
+        divisor = getRandomInt(2, 10);
+        quotient = getRandomInt(1, 10);
+        dividend = divisor * quotient;
+        
+        // Sprawdzamy czy obliczona dzielna mieści się w wybranym zakresie trudności
+        if (dividend < minDividend || dividend > maxDividend) {
+          attempts++;
+          if (attempts > 20) {
+            // Po wielu próbach, po prostu dostosuj do najbliższej wartości w zakresie
+            dividend = Math.max(minDividend, Math.min(maxDividend, dividend));
+            break;
+          }
+          continue;
+        }
+      }
     }
 
     // Check if this problem is the same as the last one
     isLastProblem = lastProblem !== undefined && lastProblem !== null && 
                      dividend === lastProblem[0] && divisor === lastProblem[1];
 
-  } while (isLastProblem);
+    // Zwiększ licznik prób, aby uniknąć nieskończonej pętli
+    attempts++;
+    
+    // Po zbyt dużej liczbie prób, po prostu zaakceptuj zadanie
+    if (attempts > 30) break;
+
+  } while (isLastProblem || dividend < minDividend || dividend > maxDividend);
   
   return [dividend, divisor, quotient];
 }

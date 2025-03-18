@@ -52,7 +52,7 @@ export default function Settings({ mode, onBack }: SettingsProps) {
   // Zaktualizuj maksymalną liczbę pytań na podstawie wybranych liczb
   useEffect(() => {
     if (mode === 'multiplication' && selectedNumbers.length > 0) {
-      const maxQuestions = calculateMaxQuestions(selectedNumbers);
+      const maxQuestions = Math.min(10, calculateMaxQuestions(selectedNumbers));
       setMaxPossibleQuestions(maxQuestions);
       
       // Jeśli bieżąca liczba pytań przekracza maksimum, dostosuj ją
@@ -60,16 +60,21 @@ export default function Settings({ mode, onBack }: SettingsProps) {
         setLocalQuestionCount(maxQuestions);
       }
     } else {
-      // Dla dzielenia, ustaw domyślne maximum
-      setMaxPossibleQuestions(50);
+      // Dla dzielenia, ustaw maksimum na 10
+      setMaxPossibleQuestions(10);
+      
+      // Jeśli bieżąca liczba pytań przekracza maksimum, dostosuj ją
+      if (localQuestionCount > 10) {
+        setLocalQuestionCount(10);
+      }
     }
   }, [selectedNumbers, mode, localQuestionCount]);
 
   // Function to handle incrementing/decrementing question count
   const adjustQuestionCount = (amount: number) => {
     const newValue = localQuestionCount + amount;
-    // Enforce min of 5 and max of maxPossibleQuestions
-    if (newValue >= 5 && newValue <= maxPossibleQuestions) {
+    // Enforce min of 5 and max of 10
+    if (newValue >= 5 && newValue <= Math.min(10, maxPossibleQuestions)) {
       setLocalQuestionCount(newValue);
     } else if (newValue > maxPossibleQuestions) {
       setLocalQuestionCount(maxPossibleQuestions);
@@ -104,9 +109,9 @@ export default function Settings({ mode, onBack }: SettingsProps) {
       if (localDivisionRange === 'low') {
         setNumberRange([2, 30]);
       } else if (localDivisionRange === 'medium') {
-        setNumberRange([20, 60]);
+        setNumberRange([31, 60]);
       } else { // high
-        setNumberRange([50, 100]);
+        setNumberRange([61, 100]);
       }
     }
     
@@ -180,7 +185,7 @@ export default function Settings({ mode, onBack }: SettingsProps) {
                 `}
               >
                 <span>Średni</span>
-                <span className="text-sm">(20-60)</span>
+                <span className="text-sm">(31-60)</span>
               </button>
               <button
                 onClick={() => setLocalDivisionRange('high')}
@@ -193,7 +198,7 @@ export default function Settings({ mode, onBack }: SettingsProps) {
                 `}
               >
                 <span>Trudny</span>
-                <span className="text-sm">(50-100)</span>
+                <span className="text-sm">(61-100)</span>
               </button>
             </div>
             <p className="text-gray-300 text-sm mt-2">
@@ -205,7 +210,7 @@ export default function Settings({ mode, onBack }: SettingsProps) {
         {/* Questions count selector */}
         <div>
           <label className="block text-xl font-semibold text-gray-300 mb-2">
-            Liczba pytań: <span className="text-sm font-normal">(max: {maxPossibleQuestions})</span>
+            Liczba pytań: <span className="text-sm font-normal">(max: 10)</span>
           </label>
           <div className="flex items-center h-16 bg-[#1e293b] rounded-xl">
             <button 

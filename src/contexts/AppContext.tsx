@@ -2,7 +2,7 @@ import { createContext, useContext, useState, ReactNode, useCallback } from 'rea
 
 // Types
 export type AppMode = 'home' | 'multiplication' | 'division' | 'review' | 'results';
-export type RangeType = 'low' | 'medium' | 'high'; // Dla dzielenia: low = 2-30, medium = 20-60, high = 50-100
+export type RangeType = 'low' | 'medium' | 'high'; // Dla dzielenia: low = 2-30, medium = 31-60, high = 61-100
 
 export interface MistakeRecord {
   question: string;

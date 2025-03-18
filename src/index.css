@@ -5,6 +5,7 @@
 /* Custom styles can go below */
 
 :root {
+  --vh: 1vh;
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -28,13 +29,20 @@ html, body, #root {
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  min-height: calc(var(--vh, 1vh) * 100);
   background-color: #0f172a;
+  padding-bottom: env(safe-area-inset-bottom, 20px);
 }
 
 #root {
   display: flex;
   flex-direction: column;
+  height: 100%;
+}
+
+/* Dodanie klasy pomocniczej dla bezpiecznego obszaru na dole */
+.pb-safe-area {
+  padding-bottom: env(safe-area-inset-bottom, 20px);
 }
 
 h1 {
