@@ -204,9 +204,7 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
       
       setFeedback({
         correct: false,
-        message: isTimeUp 
-          ? `Czas minął! ${fullProblem}`
-          : fullProblem
+        message: fullProblem
       });
       
       // Dodawanie do powtórek tylko gdy NIE jesteśmy w trybie powtórki
@@ -432,10 +430,10 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
       {feedback && (
         <div className="fixed inset-0 flex items-center justify-center">
           <div 
-            className={`w-full p-6 text-center text-6xl font-extrabold shadow-2xl rounded-none ${
+            className={`w-full p-6 text-center font-extrabold shadow-2xl rounded-none ${
               feedback.correct 
-                ? 'bg-green-900 text-green-200' 
-                : 'bg-red-900 text-red-200'
+                ? 'bg-green-900 text-green-200 text-4xl' 
+                : 'bg-red-900 text-red-200 text-6xl'
             }`}
           >
             {feedback.message}
