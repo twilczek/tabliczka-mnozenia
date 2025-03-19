@@ -1,9 +1,28 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAppContext, MistakeRecord } from '../contexts/AppContext';
-import { formatProblem, generateQuizProblems } from '../utils/mathUtils';
+import { formatProblem } from '../utils/mathUtils';
+import { getQuizMultiplicationProblems, getQuizDivisionProblems } from '../utils/allProblems';
 import useTimer from '../hooks/useTimer';
 import { HomeIcon } from './icons/HomeIcon';
-import { FEEDBACK_DELAY, COUNTDOWN_START_DELAY } from '../utils/constants';
+import { COUNTDOWN_START_DELAY } from '../utils/constants';
+
+// Add array of possible positive feedback messages with emojis
+const POSITIVE_FEEDBACK = [
+  "Super! 🎉",
+  "Brawo! 👏",
+  "Świetnie! 🌟",
+  "Dobrze! 👍",
+  "Ekstra! 🏆",
+  "Znakomicie! 🚀",
+  "Doskonale! 💯",
+  "Fantastycznie! 🤩"
+];
+
+// Get random positive feedback message
+function getRandomPositiveFeedback() {
+  const randomIndex = Math.floor(Math.random() * POSITIVE_FEEDBACK.length);
+  return POSITIVE_FEEDBACK[randomIndex];
+}
 
 interface QuestionProps {
   isReviewMode?: boolean;
@@ -23,7 +42,9 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
     setMode,
     questionCount,
     mistakes,
-    timerDuration
+    timerDuration,
+    correctFeedbackDelay,
+    incorrectFeedbackDelay
   } = useAppContext();
   
   // Dodaj referencję do śledzenia, czy komponent jest aktywny
@@ -40,7 +61,14 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
   const [isTransitioning, setIsTransitioning] = useState(false);
   
   // Timer setup using timerDuration from context
-  const TOTAL_TIME = isReviewMode ? 10 : timerDuration;
+  const TOTAL_TIME = timerDuration;
+  
+  // Log for debugging
+  useEffect(() => {
+    console.log('Question component - timer duration:', timerDuration, 'seconds, isReviewMode:', isReviewMode);
+    console.log('Feedback delays - correct:', correctFeedbackDelay, 'ms, incorrect:', incorrectFeedbackDelay, 'ms');
+  }, [timerDuration, isReviewMode, correctFeedbackDelay, incorrectFeedbackDelay]);
+
   const { time, startTimer, stopTimer, resetTimer } = useTimer(TOTAL_TIME, () => {
     handleSubmit(true);
   });
@@ -93,16 +121,16 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
       return;
     }
 
-    // Generate unique problems for the entire quiz
-    const problems = generateQuizProblems(
-      mode as 'multiplication' | 'division',
-      selectedNumbers,
-      questionCount
-    );
-    
+    // Generate quiz problems using pre-generated lists
+    let problems: Array<[number, number, number]> = [];
+    if (mode === 'multiplication') {
+      problems = getQuizMultiplicationProblems(selectedNumbers, questionCount);
+    } else {
+      problems = getQuizDivisionProblems(selectedNumbers, numberRange, questionCount);
+    }
+
     setAllProblems(problems);
-    
-    // If we have problems, set the first one as current
+
     if (problems.length > 0) {
       setCurrentProblem(problems[0]);
     }
@@ -158,7 +186,7 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
     if (isCorrect) {
       setFeedback({ 
         correct: true, 
-        message: 'Poprawnie!' 
+        message: getRandomPositiveFeedback()
       });
       
       if (!isReviewMode) {
@@ -171,11 +199,14 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
         ? reviewItem?.mode === 'multiplication' ? '*' : '/' 
         : mode === 'multiplication' ? '*' : '/';
       
+      // Format the full problem with correct answer
+      const fullProblem = `${a} ${operator} ${b} = ${correctAnswer}`;
+      
       setFeedback({
         correct: false,
         message: isTimeUp 
-          ? 'Czas minął! Poprawna odpowiedź: ' + correctAnswer
-          : 'Niepoprawnie. Poprawna odpowiedź: ' + correctAnswer
+          ? `Czas minął! ${fullProblem}`
+          : fullProblem
       });
       
       // Dodawanie do powtórek tylko gdy NIE jesteśmy w trybie powtórki
@@ -198,7 +229,7 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
         onAnswered(isCorrect, reviewIndex);
         // Reset transitioning flag after the callback
         setIsTransitioning(false);
-      }, FEEDBACK_DELAY);
+      }, isCorrect ? correctFeedbackDelay : incorrectFeedbackDelay);
     } else {
       // Move to next problem after a delay
       setTimeout(() => {
@@ -229,7 +260,7 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
         setTimeout(() => {
           startCountdown();
         }, COUNTDOWN_START_DELAY);
-      }, FEEDBACK_DELAY);
+      }, isCorrect ? correctFeedbackDelay : incorrectFeedbackDelay);
     }
   };
 

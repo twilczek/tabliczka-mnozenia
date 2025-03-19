@@ -11,7 +11,7 @@ export interface MistakeRecord {
   mode: 'multiplication' | 'division';
 }
 
-interface AppContextType {
+export interface AppContextType {
   mode: AppMode;
   setMode: (mode: AppMode) => void;
   numberRange: [number, number];
@@ -31,6 +31,10 @@ interface AppContextType {
   timerDuration: number;
   setTimerDuration: (duration: number) => void;
   resetContext: () => void;
+  correctFeedbackDelay: number;
+  setCorrectFeedbackDelay: (delay: number) => void;
+  incorrectFeedbackDelay: number;
+  setIncorrectFeedbackDelay: (delay: number) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -42,7 +46,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [divisionRangeType, setDivisionRangeType] = useState<RangeType>('low');
   const [questionCount, setQuestionCount] = useState(10);
   const [currentScore, setCurrentScore] = useState(0);
-  const [timerDuration, setTimerDuration] = useState(10); // Default timer: 10 seconds
+  const [timerDuration, setTimerDuration] = useState(15); // Default timer: 15 seconds
+  const [correctFeedbackDelay, setCorrectFeedbackDelay] = useState<number>(1500); // Default 1.5 seconds for correct answers
+  const [incorrectFeedbackDelay, setIncorrectFeedbackDelay] = useState<number>(2500); // Default 2.5 seconds for incorrect answers
   
   // Get stored mistakes from localStorage or initialize empty array
   const storedMistakes = localStorage.getItem('mistakes');
@@ -89,7 +95,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('mistakes', JSON.stringify(updatedMistakes));
   };
 
-  const value = {
+  const value: AppContextType = {
     mode,
     setMode,
     numberRange,
@@ -108,7 +114,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     removeMistake,
     timerDuration,
     setTimerDuration,
-    resetContext
+    resetContext,
+    correctFeedbackDelay,
+    setCorrectFeedbackDelay,
+    incorrectFeedbackDelay,
+    setIncorrectFeedbackDelay
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

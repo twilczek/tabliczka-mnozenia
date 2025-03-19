@@ -49,35 +49,31 @@ export default function Settings({ mode, onBack }: SettingsProps) {
     }
   };
 
-  // Zaktualizuj maksymalną liczbę pytań na podstawie wybranych liczb
+  // Calculate max possible questions based on selected numbers
   useEffect(() => {
-    if (mode === 'multiplication' && selectedNumbers.length > 0) {
-      const maxQuestions = Math.min(10, calculateMaxQuestions(selectedNumbers));
+    // For multiplication mode, calculate based on selected numbers
+    if (mode === 'multiplication') {
+      const maxQuestions = calculateMaxQuestions(selectedNumbers);
       setMaxPossibleQuestions(maxQuestions);
-      
-      // Jeśli bieżąca liczba pytań przekracza maksimum, dostosuj ją
-      if (localQuestionCount > maxQuestions) {
+      if (selectedNumbers.length === 0) {
+        // When no numbers are selected, ensure question count remains 0
+        setLocalQuestionCount(0);
+      } else if (localQuestionCount === 0) {
+        // When the first number is selected, default to 10 questions
+        setLocalQuestionCount(10);
+      } else if (localQuestionCount > maxQuestions) {
+        // If current question count exceeds maximum possible, adjust it
         setLocalQuestionCount(maxQuestions);
       }
-    } else {
-      // Dla dzielenia, ustaw maksimum na 10
-      setMaxPossibleQuestions(10);
-      
-      // Jeśli bieżąca liczba pytań przekracza maksimum, dostosuj ją
-      if (localQuestionCount > 10) {
-        setLocalQuestionCount(10);
-      }
     }
-  }, [selectedNumbers, mode, localQuestionCount]);
-
-  // Function to handle incrementing/decrementing question count
-  const adjustQuestionCount = (amount: number) => {
-    const newValue = localQuestionCount + amount;
-    // Enforce min of 5 and max of 10
-    if (newValue >= 5 && newValue <= Math.min(10, maxPossibleQuestions)) {
+  }, [mode, selectedNumbers, localQuestionCount]);
+  
+  // Handle question count adjustment
+  const adjustQuestionCount = (change: number) => {
+    const newValue = localQuestionCount + change;
+    // Enforce min of 5 and max of maxPossibleQuestions
+    if (newValue >= 5 && newValue <= maxPossibleQuestions) {
       setLocalQuestionCount(newValue);
-    } else if (newValue > maxPossibleQuestions) {
-      setLocalQuestionCount(maxPossibleQuestions);
     }
   };
 
@@ -97,7 +93,8 @@ export default function Settings({ mode, onBack }: SettingsProps) {
     }
     
     setCurrentScore(0);
-    setQuestionCount(localQuestionCount);
+    // For division, always set question count to 10
+    setQuestionCount(mode === 'division' ? 10 : localQuestionCount);
     setTimerDuration(localTimerDuration);
     
     if (mode === 'multiplication') {
@@ -121,23 +118,23 @@ export default function Settings({ mode, onBack }: SettingsProps) {
 
   return (
     <div className="w-full h-full flex flex-col bg-[#0f172a] text-white">
-      <h1 className="text-3xl font-bold text-center py-4 text-blue-500">
+      <h1 className="text-3xl font-bold text-center py-2 text-blue-500">
         {mode === 'multiplication' ? 'Ustawienia mnożenia' : 'Ustawienia dzielenia'}
       </h1>
       
-      <div className="flex-1 flex flex-col space-y-6 px-4 pb-4 overflow-y-auto">
+      <div className="flex-1 flex flex-col space-y-4 px-4 pb-4 overflow-y-auto">
         {mode === 'multiplication' ? (
           <div className="space-y-3">
             <label className="block text-xl font-semibold text-gray-300">
               Wybierz liczby do ćwiczenia:
             </label>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(number => (
                 <button
                   key={number}
                   onClick={() => toggleNumber(number)}
                   className={`
-                    h-20 rounded-xl text-2xl font-bold flex items-center justify-center
+                    h-16 rounded-xl text-2xl font-bold flex items-center justify-center
                     ${selectedNumbers.includes(number) 
                       ? 'bg-blue-600 hover:bg-blue-500' 
                       : 'bg-[#1e293b] hover:bg-[#334155]'}
@@ -148,12 +145,11 @@ export default function Settings({ mode, onBack }: SettingsProps) {
                 </button>
               ))}
             </div>
-            <p className="text-gray-300">
-              {selectedNumbers.length === 0 
-                ? "Wybierz przynajmniej jedną liczbę" 
-                : `Wybrano ${selectedNumbers.length} ${selectedNumbers.length === 1 ? 'liczbę' : selectedNumbers.length < 5 ? 'liczby' : 'liczb'}`
-              }
-            </p>
+            {selectedNumbers.length > 0 && (
+              <p className="text-gray-300">
+                {`Wybrano ${selectedNumbers.length} ${selectedNumbers.length === 1 ? 'liczbę' : selectedNumbers.length < 5 ? 'liczby' : 'liczb'}`}
+              </p>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -207,10 +203,11 @@ export default function Settings({ mode, onBack }: SettingsProps) {
           </div>
         )}
 
-        {/* Questions count selector */}
+        {/* Questions count selector - only show for multiplication mode */}
+        {mode === 'multiplication' && (
         <div>
-          <label className="block text-xl font-semibold text-gray-300 mb-2">
-            Liczba pytań: <span className="text-sm font-normal">(max: 10)</span>
+          <label className="block text-xl font-semibold text-gray-300 mb-1">
+            Liczba pytań: <span className="text-sm font-normal">(max: {maxPossibleQuestions})</span>
           </label>
           <div className="flex items-center h-16 bg-[#1e293b] rounded-xl">
             <button 
@@ -231,22 +228,30 @@ export default function Settings({ mode, onBack }: SettingsProps) {
             <button 
               onClick={() => adjustQuestionCount(1)}
               className="h-full w-16 bg-[#334155] text-2xl font-bold flex items-center justify-center"
+              disabled={localQuestionCount >= maxPossibleQuestions}
             >
               +1
             </button>
             <button 
               onClick={() => adjustQuestionCount(5)}
               className="h-full w-16 bg-[#334155] text-2xl font-bold rounded-r-xl flex items-center justify-center"
+              disabled={localQuestionCount + 5 > maxPossibleQuestions}
             >
               +5
             </button>
           </div>
+          {selectedNumbers.length > 0 && (
+            <p className="mt-2 text-sm text-gray-400 text-center">
+              Dostępne zadania: {maxPossibleQuestions}
+            </p>
+          )}
         </div>
+        )}
 
         {/* Timer duration selector */}
         <div>
-          <label className="block text-xl font-semibold text-gray-300 mb-2">
-            Czas na odpowiedź (sekundy):
+          <label className="block text-xl font-semibold text-gray-300 mb-1">
+            Czas na odpowiedź:
           </label>
           <div className="flex items-center h-16 bg-[#1e293b] rounded-xl">
             <button 

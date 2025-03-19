@@ -205,11 +205,13 @@ export function calculateMaxQuestions(selectedNumbers: number[]): number {
   if (selectedNumbers.length === 0) return 0;
   
   if (selectedNumbers.length === 1) {
-    // With one number, we can have up to 10 questions (1-10)
+    // With one selected number, we can have up to 10 questions: (1 x n) to (10 x n)
     return 10;
   } else {
-    // With multiple numbers, we have n² possible combinations
-    return selectedNumbers.length * selectedNumbers.length;
+    // With multiple selected numbers, each number provides 10 problems, but duplicates occur for commutative pairs (e.g. 3x5 and 5x3 are the same).
+    // Therefore, total unique problems = 10*n - (n*(n-1))/2
+    const n = selectedNumbers.length;
+    return 10 * n - (n * (n - 1)) / 2;
   }
 }
 
@@ -218,31 +220,18 @@ export function generateAllMultiplicationProblems(
   selectedNumbers: number[]
 ): Array<[number, number, number]> {
   const problems: Array<[number, number, number]> = [];
-  const usedPairs = new Set<string>();
-
+  
   if (selectedNumbers.length === 0) return problems;
-
-  if (selectedNumbers.length === 1) {
-    // If only one number is selected, generate all combinations with 1-10
-    const num = selectedNumbers[0];
+  
+  // For each selected number, generate its multiplication table (1-10), skipping duplicates
+  for (const n of selectedNumbers) {
     for (let i = 1; i <= 10; i++) {
-      problems.push([num, i, num * i]);
-    }
-  } else {
-    // For multiple numbers, generate all combinations between them
-    for (const a of selectedNumbers) {
-      for (const b of selectedNumbers) {
-        // Create a unique key for this pair (order doesn't matter for multiplication)
-        const key = a <= b ? `${a}x${b}` : `${b}x${a}`;
-        
-        if (!usedPairs.has(key)) {
-          usedPairs.add(key);
-          problems.push([a, b, a * b]);
-        }
-      }
+      // If i is also a selected number and i < n, skip to avoid duplicate (commutative) pair
+      if (selectedNumbers.includes(i) && i < n) continue;
+      problems.push([n, i, n * i]);
     }
   }
-
+  
   return problems;
 }
 
