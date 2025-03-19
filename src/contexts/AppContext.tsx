@@ -51,10 +51,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [incorrectFeedbackDelay, setIncorrectFeedbackDelay] = useState<number>(4500); // Default 4.5 seconds for incorrect answers
   
   // Get stored mistakes from localStorage or initialize empty array
-  const storedMistakes = localStorage.getItem('mistakes');
-  const [mistakes, setMistakes] = useState<MistakeRecord[]>(
-    storedMistakes ? JSON.parse(storedMistakes) : []
-  );
+  // Use a separate function to load mistakes from localStorage to avoid doing it on every render
+  const loadMistakesFromStorage = () => {
+    const storedMistakes = localStorage.getItem('mistakes');
+    return storedMistakes ? JSON.parse(storedMistakes) : [];
+  };
+  
+  const [mistakes, setMistakes] = useState<MistakeRecord[]>(loadMistakesFromStorage());
   
   // Reset function to clear scores and return to defaults
   const resetContext = useCallback(() => {
@@ -68,15 +71,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
       resetContext();
     }
     
-    // W trybie powtórki nie potrzebujemy już synchronizować mistakes z localStorage
-    // To jest teraz obsługiwane w komponencie Review
+    // When returning from review mode to home, refresh the mistakes from localStorage
+    if (mode === 'review' && newMode === 'home') {
+      setMistakes(loadMistakesFromStorage());
+    }
     
     setModeInternal(newMode);
-  }, [resetContext]);
+  }, [resetContext, mode]);
 
   // Add a mistake and update localStorage
   const addMistake = (mistake: MistakeRecord) => {
-    const updatedMistakes = [...mistakes, mistake];
+    // Always get the latest mistakes from localStorage
+    const currentMistakes = loadMistakesFromStorage();
+    const updatedMistakes = [...currentMistakes, mistake];
+    
+    // Update both state and localStorage
     setMistakes(updatedMistakes);
     localStorage.setItem('mistakes', JSON.stringify(updatedMistakes));
   };

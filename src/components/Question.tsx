@@ -130,6 +130,18 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
     }
 
     setAllProblems(problems);
+    
+    // Add more detailed console log to show both requested and actual number of problems
+    console.log(`Quiz requested ${questionCount} questions but generated ${problems.length} problems.`);
+    console.log('Selected numbers:', selectedNumbers);
+    console.log('Mode:', mode);
+    if (mode === 'division') {
+      console.log('Number range:', numberRange);
+    }
+    console.log('All generated problems for current quiz:', problems.map(([a, b, result]) => {
+      const operator = mode === 'multiplication' ? '*' : '/';
+      return `${a} ${operator} ${b} = ${result}`;
+    }));
 
     if (problems.length > 0) {
       setCurrentProblem(problems[0]);
@@ -229,36 +241,9 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
         setIsTransitioning(false);
       }, isCorrect ? correctFeedbackDelay : incorrectFeedbackDelay);
     } else {
-      // Move to next problem after a delay
-      setTimeout(() => {
-        // Increment question number if not in review mode and not at the last question
-        if (!isReviewMode && currentQuestionNumber < questionCount) {
-          const nextQuestionNumber = currentQuestionNumber + 1;
-          setCurrentQuestionNumber(nextQuestionNumber);
-          
-          // Set the next problem
-          if (nextQuestionNumber <= allProblems.length) {
-            setCurrentProblem(allProblems[nextQuestionNumber - 1]);
-          }
-        }
-        
-        // If we reached the last question and not in review mode, go to results screen
-        if (!isReviewMode && currentQuestionNumber >= questionCount) {
-          setMode('results');
-          return;
-        }
-        
-        // Reset for next question
-        setAnswer('');
-        setFeedback(null);
-        resetTimer();
-        setIsTransitioning(false);
-        
-        // Uruchom timer dla następnego pytania
-        setTimeout(() => {
-          startCountdown();
-        }, COUNTDOWN_START_DELAY);
-      }, isCorrect ? correctFeedbackDelay : incorrectFeedbackDelay);
+      // We're not automatically moving to the next question anymore
+      // Just reset the transitioning flag to allow user interaction
+      setIsTransitioning(false);
     }
   };
 
@@ -288,6 +273,40 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
     
     // Przejdź do strony głównej
     setMode('home');
+  };
+
+  // Add a function to handle moving to the next question
+  const handleNextQuestion = () => {
+    // Only proceed if there's feedback showing
+    if (!feedback) return;
+    
+    // If we're in review mode, nothing to do here as Review component handles navigation
+    if (isReviewMode) return;
+    
+    // Increment question number if not at the last question
+    if (currentQuestionNumber < questionCount) {
+      const nextQuestionNumber = currentQuestionNumber + 1;
+      setCurrentQuestionNumber(nextQuestionNumber);
+      
+      // Set the next problem
+      if (nextQuestionNumber <= allProblems.length) {
+        setCurrentProblem(allProblems[nextQuestionNumber - 1]);
+      }
+    } else {
+      // If we reached the last question, go to results screen
+      setMode('results');
+      return;
+    }
+    
+    // Reset for next question
+    setAnswer('');
+    setFeedback(null);
+    resetTimer();
+    
+    // Start timer for next question
+    setTimeout(() => {
+      startCountdown();
+    }, COUNTDOWN_START_DELAY);
   };
 
   return (
@@ -426,9 +445,12 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
         </div>
       </div>
 
-      {/* Feedback message */}
+      {/* Feedback message - now clickable to proceed to next question */}
       {feedback && (
-        <div className="fixed inset-0 flex items-center justify-center">
+        <div 
+          className="fixed inset-0 flex items-center justify-center cursor-pointer"
+          onClick={handleNextQuestion}
+        >
           <div 
             className={`w-full p-6 text-center font-extrabold shadow-2xl rounded-none ${
               feedback.correct 
@@ -437,6 +459,7 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
             }`}
           >
             {feedback.message}
+            <div className="mt-4 text-lg opacity-75">Kliknij aby kontynuować</div>
           </div>
         </div>
       )}

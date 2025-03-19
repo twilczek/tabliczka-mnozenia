@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAppContext, MistakeRecord } from '../contexts/AppContext';
 import Question from './Question';
-import { FEEDBACK_DELAY } from '../utils/constants';
 
 export default function Review() {
   const { setMode, setCurrentScore, setQuestionCount } = useAppContext();
@@ -49,16 +48,15 @@ export default function Review() {
     setCorrectAnswers(newCorrectAnswers);
     
     // Przejdź do następnego pytania z opóźnieniem
-    setTimeout(() => {
-      if (currentIndex + 1 < reviewItems.length) {
-        // Przejdź do następnego pytania
-        setCurrentIndex(currentIndex + 1);
-        isProcessingAnswer.current = false;
-      } else {
-        // Zakończ powtórkę
-        finalizeReview(correct);
-      }
-    }, FEEDBACK_DELAY);
+    // Note: We've removed the delay since user will click to continue
+    if (currentIndex + 1 < reviewItems.length) {
+      // Przejdź do następnego pytania
+      setCurrentIndex(currentIndex + 1);
+      isProcessingAnswer.current = false;
+    } else {
+      // Zakończ powtórkę
+      finalizeReview(correct);
+    }
   };
   
   // Zakończenie sesji powtórki
@@ -78,7 +76,7 @@ export default function Review() {
     // Utworzenie nowej tablicy z błędami - tylko te, na które użytkownik odpowiedział niepoprawnie
     const newMistakes: MistakeRecord[] = [];
     
-    // Dodaj do localStorage tylko błędy, na które użytkownik odpowiedział niepoprawnie
+    // Dodaj do nowej tablicy tylko błędy, na które użytkownik odpowiedział niepoprawnie
     reviewItems.forEach((item, index) => {
       if (!finalCorrectAnswers[index]) {
         newMistakes.push(item);
@@ -87,7 +85,7 @@ export default function Review() {
     
     console.log('Zapisuję błędy do powtórki:', newMistakes);
     
-    // Zapisz nową listę błędów do localStorage
+    // Zapisz nową listę błędów do localStorage - całkowicie zastępując poprzednią listę
     localStorage.setItem('mistakes', JSON.stringify(newMistakes));
   };
   
@@ -104,9 +102,6 @@ export default function Review() {
   if (isFinished) {
     // Oblicz finalną liczbę poprawnych odpowiedzi
     const finalCorrectCount = correctAnswers.filter(correct => correct).length;
-    
-    // Sprawdź, czy są jakieś błędy do powtórzenia
-    const hasMistakesForReview = localStorage.getItem('mistakes') !== '[]';
     
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-[#0f172a] text-white p-6">
@@ -127,20 +122,12 @@ export default function Review() {
               : "Niepoprawne odpowiedzi zostały zapisane do kolejnej powtórki."}
           </p>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="flex justify-center">
             <button
               onClick={() => setMode('home')}
               className="bg-[#334155] hover:bg-[#475569] text-white font-bold py-4 px-6 rounded-xl"
             >
               Menu główne
-            </button>
-            
-            <button
-              onClick={() => setMode('review')}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-6 rounded-xl"
-              disabled={!hasMistakesForReview}
-            >
-              Kontynuuj powtórki
             </button>
           </div>
         </div>
