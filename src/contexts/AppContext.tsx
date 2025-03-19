@@ -48,7 +48,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [currentScore, setCurrentScore] = useState(0);
   const [timerDuration, setTimerDuration] = useState(15); // Default timer: 15 seconds
   const [correctFeedbackDelay, setCorrectFeedbackDelay] = useState<number>(1500); // Default 1.5 seconds for correct answers
-  const [incorrectFeedbackDelay, setIncorrectFeedbackDelay] = useState<number>(2500); // Default 2.5 seconds for incorrect answers
+  const [incorrectFeedbackDelay, setIncorrectFeedbackDelay] = useState<number>(4500); // Default 4.5 seconds for incorrect answers
   
   // Get stored mistakes from localStorage or initialize empty array
   const storedMistakes = localStorage.getItem('mistakes');

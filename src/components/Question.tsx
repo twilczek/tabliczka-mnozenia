@@ -430,9 +430,9 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
 
       {/* Feedback message */}
       {feedback && (
-        <div className="fixed inset-x-0 bottom-0 px-4 mb-10">
+        <div className="fixed inset-0 flex items-center justify-center">
           <div 
-            className={`p-4 text-center text-2xl font-bold rounded-lg ${
+            className={`w-full p-6 text-center text-6xl font-extrabold shadow-2xl rounded-none ${
               feedback.correct 
                 ? 'bg-green-900 text-green-200' 
                 : 'bg-red-900 text-red-200'
