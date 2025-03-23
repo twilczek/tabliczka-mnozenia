@@ -13,6 +13,11 @@ export default function Review() {
   const [correctAnswers, setCorrectAnswers] = useState<boolean[]>([]);
   const isProcessingAnswer = useRef(false);
   
+  // Reset isProcessingAnswer when currentIndex changes
+  useEffect(() => {
+    isProcessingAnswer.current = false;
+  }, [currentIndex]);
+  
   // Przy inicjalizacji: pobrać błędy z localStorage i przygotować powtórkę
   useEffect(() => {
     // Pobrać błędy z localStorage
@@ -47,8 +52,7 @@ export default function Review() {
     newCorrectAnswers[currentIndex] = correct;
     setCorrectAnswers(newCorrectAnswers);
     
-    // Przejdź do następnego pytania z opóźnieniem
-    // Note: We've removed the delay since user will click to continue
+    // Przejdź do następnego pytania
     if (currentIndex + 1 < reviewItems.length) {
       // Przejdź do następnego pytania
       setCurrentIndex(currentIndex + 1);
@@ -56,6 +60,7 @@ export default function Review() {
     } else {
       // Zakończ powtórkę
       finalizeReview(correct);
+      isProcessingAnswer.current = false;
     }
   };
   

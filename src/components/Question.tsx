@@ -182,6 +182,9 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
     setAnswer(prev => prev.slice(0, -1));
   };
 
+  // Add state to track timeout ID
+  const [feedbackTimeoutId, setFeedbackTimeoutId] = useState<number | null>(null);
+
   // Handle submission
   const handleSubmit = (isTimeUp: boolean = false) => {
     // Jeśli nie ma problemu lub brak odpowiedzi (i nie upłynął czas) lub jest w trakcie przejścia, przerwij
@@ -232,18 +235,19 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
       }
     }
     
-    // Call the callback if provided (for review mode), but only after the feedback delay
+    // Reset isTransitioning after feedback is set, so clicks can be registered
+    setIsTransitioning(false);
+    
+    // Store the timeout ID so we can clear it if user clicks
     if (onAnswered) {
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         // Pass the correct status to the Review component
         onAnswered(isCorrect, reviewIndex);
-        // Reset transitioning flag after the callback
-        setIsTransitioning(false);
+        // Clear the timeout ID
+        setFeedbackTimeoutId(null);
       }, isCorrect ? correctFeedbackDelay : incorrectFeedbackDelay);
-    } else {
-      // We're not automatically moving to the next question anymore
-      // Just reset the transitioning flag to allow user interaction
-      setIsTransitioning(false);
+      
+      setFeedbackTimeoutId(timeoutId);
     }
   };
 
@@ -280,9 +284,23 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
     // Only proceed if there's feedback showing
     if (!feedback) return;
     
-    // If we're in review mode, nothing to do here as Review component handles navigation
-    if (isReviewMode) return;
+    // If we're in review mode and have a callback
+    if (isReviewMode && onAnswered && reviewIndex !== undefined) {
+      // If there's a pending timeout, clear it
+      if (feedbackTimeoutId !== null) {
+        clearTimeout(feedbackTimeoutId);
+        setFeedbackTimeoutId(null);
+      }
+      
+      // Set transitioning to prevent multiple clicks
+      setIsTransitioning(true);
+      
+      // Call the callback directly
+      onAnswered(feedback.correct, reviewIndex);
+      return;
+    }
     
+    // If we're in normal quiz mode, proceed with normal logic
     // Increment question number if not at the last question
     if (currentQuestionNumber < questionCount) {
       const nextQuestionNumber = currentQuestionNumber + 1;
@@ -448,7 +466,7 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
       {/* Feedback message - now clickable to proceed to next question */}
       {feedback && (
         <div 
-          className="fixed inset-0 flex items-center justify-center cursor-pointer"
+          className="fixed inset-0 flex items-center justify-center cursor-pointer z-50"
           onClick={handleNextQuestion}
         >
           <div 
