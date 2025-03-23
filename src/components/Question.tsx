@@ -5,6 +5,9 @@ import { getQuizMultiplicationProblems, getQuizDivisionProblems } from '../utils
 import useTimer from '../hooks/useTimer';
 import { HomeIcon } from './icons/HomeIcon';
 import { COUNTDOWN_START_DELAY } from '../utils/constants';
+// Import sound files
+import correctSound from '../assets/sounds/correct.mp3';
+import incorrectSound from '../assets/sounds/incorrect.mp3';
 
 // Add array of possible positive feedback messages with emojis
 const POSITIVE_FEEDBACK = [
@@ -22,6 +25,53 @@ const POSITIVE_FEEDBACK = [
 function getRandomPositiveFeedback() {
   const randomIndex = Math.floor(Math.random() * POSITIVE_FEEDBACK.length);
   return POSITIVE_FEEDBACK[randomIndex];
+}
+
+// Audio context and sound playing utility
+declare global {
+  interface Window {
+    webkitAudioContext: typeof AudioContext;
+  }
+}
+
+const audioContext = typeof window !== 'undefined' ? 
+  new (window.AudioContext || window.webkitAudioContext)() : 
+  null;
+let correctBuffer: AudioBuffer | null = null;
+let incorrectBuffer: AudioBuffer | null = null;
+
+// Function to load audio files
+async function loadSounds() {
+  if (!audioContext) return;
+  
+  try {
+    // Load correct sound
+    const correctResponse = await fetch(correctSound);
+    const correctArrayBuffer = await correctResponse.arrayBuffer();
+    correctBuffer = await audioContext.decodeAudioData(correctArrayBuffer);
+    
+    // Load incorrect sound
+    const incorrectResponse = await fetch(incorrectSound);
+    const incorrectArrayBuffer = await incorrectResponse.arrayBuffer();
+    incorrectBuffer = await audioContext.decodeAudioData(incorrectArrayBuffer);
+  } catch (error) {
+    console.error('Error loading sounds:', error);
+  }
+}
+
+// Function to play a sound
+function playSound(buffer: AudioBuffer | null) {
+  if (!audioContext || !buffer) return;
+  
+  // Resume audio context if it was suspended (browsers require user interaction)
+  if (audioContext.state === 'suspended') {
+    audioContext.resume();
+  }
+  
+  const source = audioContext.createBufferSource();
+  source.buffer = buffer;
+  source.connect(audioContext.destination);
+  source.start(0);
 }
 
 interface QuestionProps {
@@ -62,6 +112,11 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
   
   // Timer setup using timerDuration from context
   const TOTAL_TIME = timerDuration;
+  
+  // Load sounds when component mounts
+  useEffect(() => {
+    loadSounds();
+  }, []);
   
   // Log for debugging
   useEffect(() => {
@@ -204,6 +259,9 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
         message: getRandomPositiveFeedback()
       });
       
+      // Play correct sound
+      playSound(correctBuffer);
+      
       if (!isReviewMode) {
         // Increment score by 1
         setCurrentScore(currentScore + 1);
@@ -221,6 +279,9 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
         correct: false,
         message: fullProblem
       });
+      
+      // Play incorrect sound
+      playSound(incorrectBuffer);
       
       // Dodawanie do powtórek tylko gdy NIE jesteśmy w trybie powtórki
       // I tylko gdy czas się skończył LUB użytkownik odpowiedział źle
