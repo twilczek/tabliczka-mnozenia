@@ -25,12 +25,29 @@ const POSITIVE_FEEDBACK = [
 const correctAudio = new Audio(correctSound);
 const incorrectAudio = new Audio(incorrectSound);
 
-// Funkcja do odtwarzania dźwięków
+
+// Funkcja do odtwarzania dźwięków z obsługą błędów i ponownych prób
 function playSound(isCorrect: boolean) {
-  // Reset audio przed odtworzeniem
   const audio = isCorrect ? correctAudio : incorrectAudio;
+  
+  // Reset audio przed odtworzeniem
   audio.currentTime = 0;
-  audio.play().catch(error => console.error('Błąd odtwarzania dźwięku:', error));
+  
+  // Odtwórz z obsługą ponownych prób
+  const playPromise = audio.play();
+  
+  if (playPromise !== undefined) {
+    playPromise.catch(error => {
+      console.warn('Próba odtworzenia dźwięku nie powiodła się:', error);
+      // Spróbuj ponownie odtworzyć po krótkim opóźnieniu
+      setTimeout(() => {
+        audio.currentTime = 0;
+        audio.play().catch(retryError => 
+          console.error('Druga próba odtworzenia dźwięku nie powiodła się:', retryError)
+        );
+      }, 100);
+    });
+  }
 }
 
 // Get random positive feedback message
@@ -77,6 +94,30 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
   
   // Timer setup using timerDuration from context
   const TOTAL_TIME = timerDuration;
+
+  useEffect(() => {
+    console.log("WILK jestem")
+    // Funkcja wstępnego załadowania dźwięków
+    const preloadAudio = () => {
+      // Wstępne załadowanie dźwięków
+      correctAudio.load();
+      incorrectAudio.load();
+      
+      // Odłącz zdarzenie po pierwszym użyciu
+      document.removeEventListener('touchstart', preloadAudio);
+      document.removeEventListener('click', preloadAudio);
+    };
+    
+    // Dodaj nasłuchiwanie na pierwszą interakcję użytkownika
+    document.addEventListener('touchstart', preloadAudio);
+    document.addEventListener('click', preloadAudio);
+    
+    return () => {
+      // Cleanup
+      document.removeEventListener('touchstart', preloadAudio);
+      document.removeEventListener('click', preloadAudio);
+    };
+  }, []);
   
   // Log for debugging
   useEffect(() => {
