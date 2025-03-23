@@ -6,8 +6,8 @@ import useTimer from '../hooks/useTimer';
 import { HomeIcon } from './icons/HomeIcon';
 import { COUNTDOWN_START_DELAY } from '../utils/constants';
 // Import sound files
-import correctSound from '../assets/sounds/correct.mp3';
-import incorrectSound from '../assets/sounds/incorrect.mp3';
+import correctSound from '../assets/sounds/correct_64.mp3';
+import incorrectSound from '../assets/sounds/incorrect_64.mp3';
 
 // Add array of possible positive feedback messages with emojis
 const POSITIVE_FEEDBACK = [
@@ -21,95 +21,22 @@ const POSITIVE_FEEDBACK = [
   "Fantastycznie! 🤩"
 ];
 
+// Predefiniuj obiekty Audio - załaduj dźwięki tylko raz
+const correctAudio = new Audio(correctSound);
+const incorrectAudio = new Audio(incorrectSound);
+
+// Funkcja do odtwarzania dźwięków
+function playSound(isCorrect: boolean) {
+  // Reset audio przed odtworzeniem
+  const audio = isCorrect ? correctAudio : incorrectAudio;
+  audio.currentTime = 0;
+  audio.play().catch(error => console.error('Błąd odtwarzania dźwięku:', error));
+}
+
 // Get random positive feedback message
 function getRandomPositiveFeedback() {
   const randomIndex = Math.floor(Math.random() * POSITIVE_FEEDBACK.length);
   return POSITIVE_FEEDBACK[randomIndex];
-}
-
-// Audio context and sound playing utility
-declare global {
-  interface Window {
-    webkitAudioContext: typeof AudioContext;
-  }
-}
-
-// Use let instead of const for audioContext so we can reinitialize it if needed
-let audioContext: AudioContext | null = null;
-let correctBuffer: AudioBuffer | null = null;
-let incorrectBuffer: AudioBuffer | null = null;
-let audioInitialized = false;
-
-// iOS requires audio to be initialized during a user interaction
-function initializeAudioContext() {
-  if (audioInitialized) return;
-  
-  try {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    audioInitialized = true;
-    loadSounds();
-  } catch (error) {
-    console.error('Failed to initialize audio context:', error);
-  }
-}
-
-// Function to load audio files
-async function loadSounds() {
-  if (!audioContext) return;
-  
-  try {
-    console.log('WILK Loading sounds');
-    
-    // Load correct sound
-    const correctResponse = await fetch(correctSound);
-    const correctArrayBuffer = await correctResponse.arrayBuffer();
-    try {
-      correctBuffer = await audioContext.decodeAudioData(correctArrayBuffer);
-    } catch (decodeError) {
-      console.error('Error decoding correct sound:', decodeError);
-    }
-    
-    // Load incorrect sound
-    const incorrectResponse = await fetch(incorrectSound);
-    const incorrectArrayBuffer = await incorrectResponse.arrayBuffer();
-    try {
-      incorrectBuffer = await audioContext.decodeAudioData(incorrectArrayBuffer);
-    } catch (decodeError) {
-      console.error('Error decoding incorrect sound:', decodeError);
-    }
-  } catch (error) {
-    console.error('Error loading sounds:', error);
-  }
-}
-
-// Function to play a sound
-function playSound(buffer: AudioBuffer | null) {
-  if (!audioContext || !buffer) {
-    // Try to initialize if not already done
-    initializeAudioContext();
-    if (!audioContext || !buffer) return;
-  }
-  
-  // Resume audio context if it was suspended (browsers require user interaction)
-  if (audioContext.state === 'suspended') {
-    audioContext.resume().then(() => {
-      playBufferSound(buffer);
-    }).catch(err => {
-      console.error('Failed to resume audio context:', err);
-    });
-  } else {
-    playBufferSound(buffer);
-  }
-}
-
-// Separate function to play the actual sound once context is ready
-function playBufferSound(buffer: AudioBuffer) {
-  if (!audioContext) return;
-  
-  const source = audioContext.createBufferSource();
-  source.buffer = buffer;
-  source.connect(audioContext.destination);
-  source.start(0);
 }
 
 interface QuestionProps {
@@ -150,31 +77,6 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
   
   // Timer setup using timerDuration from context
   const TOTAL_TIME = timerDuration;
-  
-  // Load sounds when component mounts
-  useEffect(() => {
-    // iOS requires user interaction to initialize audio
-    const initAudioOnUserInteraction = () => {
-      initializeAudioContext();
-      
-      // Remove event listeners after first interaction
-      document.removeEventListener('touchstart', initAudioOnUserInteraction);
-      document.removeEventListener('mousedown', initAudioOnUserInteraction);
-      document.removeEventListener('keydown', initAudioOnUserInteraction);
-    };
-    
-    // Add event listeners for common user interactions
-    document.addEventListener('touchstart', initAudioOnUserInteraction);
-    document.addEventListener('mousedown', initAudioOnUserInteraction);
-    document.addEventListener('keydown', initAudioOnUserInteraction);
-    
-    // Clean up event listeners on component unmount
-    return () => {
-      document.removeEventListener('touchstart', initAudioOnUserInteraction);
-      document.removeEventListener('mousedown', initAudioOnUserInteraction);
-      document.removeEventListener('keydown', initAudioOnUserInteraction);
-    };
-  }, []);
   
   // Log for debugging
   useEffect(() => {
@@ -279,13 +181,8 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
     };
   }, []);
 
-  // Handle numeric input with audio initialization
+  // Handle numeric input
   const handleNumberInput = (digit: string) => {
-    // Initialize audio on first user interaction
-    if (!audioInitialized) {
-      initializeAudioContext();
-    }
-    
     if (feedback) return; // Don't allow input when feedback is shown
     setAnswer(prev => {
       // Limit to 3 digits for reasonable answers
@@ -303,13 +200,8 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
   // Add state to track timeout ID
   const [feedbackTimeoutId, setFeedbackTimeoutId] = useState<number | null>(null);
 
-  // Handle submission with explicit audio context initialization
+  // Handle submission
   const handleSubmit = (isTimeUp: boolean = false) => {
-    // Initialize audio context if not already done
-    if (!audioInitialized) {
-      initializeAudioContext();
-    }
-    
     // Jeśli nie ma problemu lub brak odpowiedzi (i nie upłynął czas) lub jest w trakcie przejścia, przerwij
     if (!currentProblem || (!answer && !isTimeUp) || isTransitioning) return;
     
@@ -321,14 +213,14 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
     const [a, b, correctAnswer] = currentProblem;
     const isCorrect = userAnswer === correctAnswer;
     
+    // Odtwarzanie odpowiedniego dźwięku
+    playSound(isCorrect);
+    
     if (isCorrect) {
       setFeedback({ 
         correct: true, 
         message: getRandomPositiveFeedback()
       });
-      
-      // Play correct sound
-      playSound(correctBuffer);
       
       if (!isReviewMode) {
         // Increment score by 1
@@ -347,9 +239,6 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
         correct: false,
         message: fullProblem
       });
-      
-      // Play incorrect sound
-      playSound(incorrectBuffer);
       
       // Dodawanie do powtórek tylko gdy NIE jesteśmy w trybie powtórki
       // I tylko gdy czas się skończył LUB użytkownik odpowiedział źle
