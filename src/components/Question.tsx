@@ -6,6 +6,12 @@ import useTimer from '../hooks/useTimer';
 import { HomeIcon } from './icons/HomeIcon';
 import { COUNTDOWN_START_DELAY } from '../utils/constants';
 
+// Funkcja odtwarzania dźwięku
+const playSound = (soundName: 'correct' | 'incorrect') => {
+  const audio = new Audio(`/sounds/${soundName}.mp3`);
+  audio.play().catch(error => console.error("Błąd odtwarzania dźwięku:", error));
+};
+
 // Add array of possible positive feedback messages with emojis
 const POSITIVE_FEEDBACK = [
   "Super! 🎉",
@@ -194,6 +200,9 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
     const userAnswer = Number(answer);
     const [a, b, correctAnswer] = currentProblem;
     const isCorrect = userAnswer === correctAnswer;
+    
+    // Odtwarzanie odpowiedniego dźwięku
+    playSound(isCorrect ? 'correct' : 'incorrect');
     
     if (isCorrect) {
       setFeedback({ 
