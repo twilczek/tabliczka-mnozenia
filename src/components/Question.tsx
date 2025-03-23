@@ -5,19 +5,10 @@ import { getQuizMultiplicationProblems, getQuizDivisionProblems } from '../utils
 import useTimer from '../hooks/useTimer';
 import { HomeIcon } from './icons/HomeIcon';
 import { COUNTDOWN_START_DELAY } from '../utils/constants';
-// Importujemy pliki dźwiękowe bezpośrednio
-import correctSoundSrc from '../assets/sounds/correct.mp3';
-import incorrectSoundSrc from '../assets/sounds/incorrect.mp3';
 
-// Tworzymy statyczne obiekty Audio - będą załadowane tylko raz
-const correctAudio = new Audio(correctSoundSrc);
-const incorrectAudio = new Audio(incorrectSoundSrc);
-
-// Funkcja odtwarzania dźwięku korzystająca z preładowanych obiektów Audio
+// Funkcja odtwarzania dźwięku
 const playSound = (soundName: 'correct' | 'incorrect') => {
-  const audio = soundName === 'correct' ? correctAudio : incorrectAudio;
-  // Resetujemy pozycję odtwarzania, aby dźwięk mógł być odtworzony ponownie
-  audio.currentTime = 0;
+  const audio = new Audio(`/sounds/${soundName}.mp3`);
   audio.play().catch(error => console.error("Błąd odtwarzania dźwięku:", error));
 };
 
