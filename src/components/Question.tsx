@@ -34,26 +34,49 @@ declare global {
   }
 }
 
-const audioContext = typeof window !== 'undefined' ? 
-  new (window.AudioContext || window.webkitAudioContext)() : 
-  null;
+// Use let instead of const for audioContext so we can reinitialize it if needed
+let audioContext: AudioContext | null = null;
 let correctBuffer: AudioBuffer | null = null;
 let incorrectBuffer: AudioBuffer | null = null;
+let audioInitialized = false;
+
+// iOS requires audio to be initialized during a user interaction
+function initializeAudioContext() {
+  if (audioInitialized) return;
+  
+  try {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioInitialized = true;
+    loadSounds();
+  } catch (error) {
+    console.error('Failed to initialize audio context:', error);
+  }
+}
 
 // Function to load audio files
 async function loadSounds() {
   if (!audioContext) return;
   
   try {
+    console.log('WILK Loading sounds');
+    
     // Load correct sound
     const correctResponse = await fetch(correctSound);
     const correctArrayBuffer = await correctResponse.arrayBuffer();
-    correctBuffer = await audioContext.decodeAudioData(correctArrayBuffer);
+    try {
+      correctBuffer = await audioContext.decodeAudioData(correctArrayBuffer);
+    } catch (decodeError) {
+      console.error('Error decoding correct sound:', decodeError);
+    }
     
     // Load incorrect sound
     const incorrectResponse = await fetch(incorrectSound);
     const incorrectArrayBuffer = await incorrectResponse.arrayBuffer();
-    incorrectBuffer = await audioContext.decodeAudioData(incorrectArrayBuffer);
+    try {
+      incorrectBuffer = await audioContext.decodeAudioData(incorrectArrayBuffer);
+    } catch (decodeError) {
+      console.error('Error decoding incorrect sound:', decodeError);
+    }
   } catch (error) {
     console.error('Error loading sounds:', error);
   }
@@ -61,12 +84,27 @@ async function loadSounds() {
 
 // Function to play a sound
 function playSound(buffer: AudioBuffer | null) {
-  if (!audioContext || !buffer) return;
+  if (!audioContext || !buffer) {
+    // Try to initialize if not already done
+    initializeAudioContext();
+    if (!audioContext || !buffer) return;
+  }
   
   // Resume audio context if it was suspended (browsers require user interaction)
   if (audioContext.state === 'suspended') {
-    audioContext.resume();
+    audioContext.resume().then(() => {
+      playBufferSound(buffer);
+    }).catch(err => {
+      console.error('Failed to resume audio context:', err);
+    });
+  } else {
+    playBufferSound(buffer);
   }
+}
+
+// Separate function to play the actual sound once context is ready
+function playBufferSound(buffer: AudioBuffer) {
+  if (!audioContext) return;
   
   const source = audioContext.createBufferSource();
   source.buffer = buffer;
@@ -115,7 +153,27 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
   
   // Load sounds when component mounts
   useEffect(() => {
-    loadSounds();
+    // iOS requires user interaction to initialize audio
+    const initAudioOnUserInteraction = () => {
+      initializeAudioContext();
+      
+      // Remove event listeners after first interaction
+      document.removeEventListener('touchstart', initAudioOnUserInteraction);
+      document.removeEventListener('mousedown', initAudioOnUserInteraction);
+      document.removeEventListener('keydown', initAudioOnUserInteraction);
+    };
+    
+    // Add event listeners for common user interactions
+    document.addEventListener('touchstart', initAudioOnUserInteraction);
+    document.addEventListener('mousedown', initAudioOnUserInteraction);
+    document.addEventListener('keydown', initAudioOnUserInteraction);
+    
+    // Clean up event listeners on component unmount
+    return () => {
+      document.removeEventListener('touchstart', initAudioOnUserInteraction);
+      document.removeEventListener('mousedown', initAudioOnUserInteraction);
+      document.removeEventListener('keydown', initAudioOnUserInteraction);
+    };
   }, []);
   
   // Log for debugging
@@ -221,8 +279,13 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
     };
   }, []);
 
-  // Handle key press for numeric input
+  // Handle numeric input with audio initialization
   const handleNumberInput = (digit: string) => {
+    // Initialize audio on first user interaction
+    if (!audioInitialized) {
+      initializeAudioContext();
+    }
+    
     if (feedback) return; // Don't allow input when feedback is shown
     setAnswer(prev => {
       // Limit to 3 digits for reasonable answers
@@ -240,8 +303,13 @@ export default function Question({ isReviewMode = false, reviewItem, reviewIndex
   // Add state to track timeout ID
   const [feedbackTimeoutId, setFeedbackTimeoutId] = useState<number | null>(null);
 
-  // Handle submission
+  // Handle submission with explicit audio context initialization
   const handleSubmit = (isTimeUp: boolean = false) => {
+    // Initialize audio context if not already done
+    if (!audioInitialized) {
+      initializeAudioContext();
+    }
+    
     // Jeśli nie ma problemu lub brak odpowiedzi (i nie upłynął czas) lub jest w trakcie przejścia, przerwij
     if (!currentProblem || (!answer && !isTimeUp) || isTransitioning) return;
     
